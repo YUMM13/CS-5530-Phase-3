@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using NuGet.Protocol;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 [assembly: InternalsVisibleTo( "LMSControllerTests" )]
@@ -104,8 +106,31 @@ namespace LMS.Controllers
         /// <param name="asgname">The name of the assignment in the category</param>
         /// <returns>The assignment contents</returns>
         public IActionResult GetAssignmentContents(string subject, int num, string season, int year, string category, string asgname)
-        {            
-            return Content("");
+        {
+            // get the course ID
+            var courseID = db.Courses.FirstOrDefault(co =>
+            co.Department == subject &&
+            co.Number == num);
+
+            // get the class ID
+            var classID = db.Classes.FirstOrDefault(cl =>
+            cl.Season == season &&
+            cl.Year == year &&
+            cl.CourseId == courseID.CourseId);
+
+            // get the category ID
+            var cat = db.Categories.FirstOrDefault(ca =>
+            ca.Name == category &&
+            ca.ClassId == classID.ClassId);
+
+            // get the assignment based off of the category ID
+            var query = 
+                from a in db.Assignments
+                where a.Name == asgname && a.CatId == cat.CatId
+                select a.Contents;
+
+
+            return Content(query.ToJson());
         }
 
 
