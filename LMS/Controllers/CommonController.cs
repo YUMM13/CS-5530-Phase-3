@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
 using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 [assembly: InternalsVisibleTo( "LMSControllerTests" )]
@@ -30,7 +32,12 @@ namespace LMS.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetDepartments()
         {            
-            return Json(null);
+            // SELCT * FROM Departments
+            var query = 
+                from d in db.Departments
+                select new {name =  d.Name, subject = d.Subject};
+
+            return Json(query.ToArray());
         }
 
 
@@ -38,16 +45,17 @@ namespace LMS.Controllers
         /// <summary>
         /// Returns a JSON array representing the course catalog.
         /// Each object in the array should have the following fields:
-        /// "subject": The subject abbreviation, (e.g. "CS")
-        /// "dname": The department name, as in "Computer Science"
+        /// "subject": The subject abbreviation, (e.g. "CS") = Courses.Department
+        /// "dname": The department name, as in "Computer Science" = 
         /// "courses": An array of JSON objects representing the courses in the department.
         ///            Each field in this inner-array should have the following fields:
-        ///            "number": The course number (e.g. 5530)
-        ///            "cname": The course name (e.g. "Database Systems")
+        ///            "number": The course number (e.g. 5530)  = Courses.Number
+        ///            "cname": The course name (e.g. "Database Systems") = Courses.Name
         /// </summary>
         /// <returns>The JSON array</returns>
         public IActionResult GetCatalog()
         {            
+            // SELECT Department, Name FROM 
             return Json(null);
         }
 
