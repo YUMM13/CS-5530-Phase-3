@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.EntityFrameworkCore;
 using NuGet.Protocol;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -130,6 +131,7 @@ namespace LMS.Controllers
                 select a.Contents;
 
 
+            // MAY BE WRONG
             return Content(query.ToJson());
         }
 
@@ -149,8 +151,35 @@ namespace LMS.Controllers
         /// <param name="uid">The uid of the student who submitted it</param>
         /// <returns>The submission text</returns>
         public IActionResult GetSubmissionText(string subject, int num, string season, int year, string category, string asgname, string uid)
-        {            
-            return Content("");
+        {
+            // get the course ID
+            var courseID = db.Courses.FirstOrDefault(co =>
+            co.Department == subject &&
+            co.Number == num);
+
+            // get the class ID
+            var classID = db.Classes.FirstOrDefault(cl =>
+            cl.Season == season &&
+            cl.Year == year &&
+            cl.CourseId == courseID.CourseId);
+
+            // get the category ID
+            var cat = db.Categories.FirstOrDefault(ca =>
+            ca.Name == category &&
+            ca.ClassId == classID.ClassId);
+
+            // get the assignment ID
+            var assignment = db.Assignments.FirstOrDefault(ass =>
+            ass.Name == asgname &&
+            ass.CatId == cat.CatId);
+
+            // get the assignment based off of the category ID
+            var query =
+                from s in db.Submissions
+                where s.UId == uid && s.AssignmentId == assignment.AssignmentId
+                select s.Solution;
+
+            return Content(query.ToJson());
         }
 
 
@@ -172,6 +201,28 @@ namespace LMS.Controllers
         /// </returns>
         public IActionResult GetUser(string uid)
         {           
+            var studentQuery = 
+                from s in db.Students
+                where s.UId == uid
+                select new { fname = s.FirstName, lname = s.LastName, uid = s.UId, department = s.Major };
+
+            if (studentQuery.Count() > 0) { return Json(studentQuery.ToArray()); }
+
+            var professorQuery = 
+                from p in db.Professors
+                where p.UId == uid
+                select new { fname = p.FirstName, lname = p.LastName, uid = p.UId, department = p.Department };
+
+            if (professorQuery.Count() > 0) { return Json(professorQuery.ToArray()); }
+
+            var adminQuery = 
+                from a in db.Administrators
+                where a.UId == uid
+                select new { fname = a.FirstName, lname = a.LastName, uid = a.UId };
+
+            if (adminQuery.Count() > 0) { return Json(adminQuery.ToArray()); }
+
+
             return Json(new { success = false });
         }
 

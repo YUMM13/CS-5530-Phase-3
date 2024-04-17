@@ -75,8 +75,17 @@ namespace LMS.Controllers
         /// <param name="uid">The uid of the student</param>
         /// <returns>The JSON array</returns>
         public IActionResult GetMyClasses(string uid)
-        {           
-            return Json(null);
+        {
+            var query =
+                from e in db.Enrolleds
+                join cl in db.Classes
+                on e.ClassId equals cl.ClassId
+                join co in db.Courses
+                on cl.CourseId equals co.CourseId
+                where e.UId == uid
+                select new { subject = co.Department, number = co.Number, name = co.Name, season = cl.Season, year = cl.Year, grade = e.Grade };
+
+            return Json(query.ToArray());
         }
 
         /// <summary>
@@ -94,8 +103,35 @@ namespace LMS.Controllers
         /// <param name="uid"></param>
         /// <returns>The JSON array</returns>
         public IActionResult GetAssignmentsInClass(string subject, int num, string season, int year, string uid)
-        {            
-            return Json(null);
+        {
+            // get the course ID
+            var courseID = db.Courses.FirstOrDefault(co =>
+            co.Department == subject &&
+            co.Number == num);
+
+            // get the class ID
+            var classID = db.Classes.FirstOrDefault(cl =>
+            cl.Season == season &&
+            cl.Year == year &&
+            cl.CourseId == courseID.CourseId);
+
+            // get the assignments in the class that the student is enrolled in
+            var query =
+                from c in db.Categories
+                join a in db.Assignments
+                on c.CatId equals a.CatId
+                into left1
+
+                from l in left1
+                join s in db.Submissions
+                on l.AssignmentId equals s.AssignmentId
+                where s.UId == uid
+                select new { aname = l.Name, cname = c.Name, due = l.DueDate, score = s.Score };
+                
+
+            // MAY NEED TO UPDATE QUERY TO BE A LEFT JOIN
+
+            return Json(query.ToArray());
         }
 
 
