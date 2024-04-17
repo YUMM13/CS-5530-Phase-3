@@ -194,7 +194,55 @@ namespace LMS.Areas.Identity.Pages.Account
         /// <returns>The uID of the new user</returns>
         string CreateNewUser( string firstName, string lastName, DateTime DOB, string departmentAbbrev, string role )
         {
-            return "unknown";
+            int idNum = 0;
+            try
+            {
+
+                switch(role)
+                {
+                    case ("Student"):
+                        idNum = 1000000;
+                        var totalStudents = db.Students.Count();
+                        idNum += totalStudents;
+                        Student student = new Student();
+                        student.FirstName = firstName;
+                        student.LastName = lastName;
+                        student.Major = departmentAbbrev;
+                        student.UId = "u" + idNum;
+                        student.Dob = new DateOnly(DOB.Year, DOB.Month, DOB.Day);
+                        db.Students.Add(student);
+                        break;
+                    case ("Professor"):
+                        idNum = 6000000;
+                        var totalProfessors = db.Professors.Count();
+                        idNum += totalProfessors;
+                        Professor pro = new Professor();
+                        pro.FirstName = firstName;
+                        pro.LastName = lastName;
+                        pro.Department = departmentAbbrev;
+                        pro.UId = "u" + idNum;
+                        pro.Dob = new DateOnly(DOB.Year, DOB.Month, DOB.Day);
+                        db.Professors.Add(pro);
+                        break;
+                    case ("Administrator"):
+                        idNum = 9000000;
+                        var totalAdministrators = db.Administrators.Count();
+                        idNum += totalAdministrators;
+                        Administrator admin = new Administrator();
+                        admin.FirstName = firstName;
+                        admin.LastName = lastName;
+                        admin.UId = "u" + idNum;
+                        admin.Dob = new DateOnly(DOB.Year, DOB.Month, DOB.Day);
+                        db.Administrators.Add(admin);
+                        break;
+                }
+
+                db.SaveChanges();
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+
+
+            return "u" + idNum;
         }
 
         /*******End code to modify********/
