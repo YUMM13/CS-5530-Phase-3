@@ -191,7 +191,7 @@ namespace LMS.Controllers
             try
             {
                 // if they are not, enroll them
-                if(studentEnrolled != null) 
+                if(studentEnrolled == null) 
                 {
                     Enrolled enroll = new Enrolled();
                     enroll.UId = uid;
