@@ -61,12 +61,8 @@ namespace LMS.Controllers
             var query =
                 from d in db.Departments
                 select new
-                {
-                    subject = d.Subject,
-                    dname = d.Name,
-                    courses = from c in d.Courses
-                              select new { number = c.Number, cname = c.Name }
-                };
+                { subject = d.Subject, dname = d.Name, courses = from c in d.Courses
+                              select new { number = c.Number, cname = c.Name } };
 
             return Json(query.ToArray());
         }
