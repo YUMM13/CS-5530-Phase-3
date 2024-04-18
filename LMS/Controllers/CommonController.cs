@@ -57,9 +57,18 @@ namespace LMS.Controllers
         /// </summary>
         /// <returns>The JSON array</returns>
         public IActionResult GetCatalog()
-        {            
-            // SELECT Department, Name FROM 
-            return Json(null);
+        {
+            var query =
+                from d in db.Departments
+                select new
+                {
+                    subject = d.Subject,
+                    dname = d.Name,
+                    courses = from c in d.Courses
+                              select new { number = c.Number, cname = c.Name }
+                };
+
+            return Json(query.ToArray());
         }
 
         /// <summary>
@@ -206,21 +215,21 @@ namespace LMS.Controllers
                 where s.UId == uid
                 select new { fname = s.FirstName, lname = s.LastName, uid = s.UId, department = s.Major };
 
-            if (studentQuery.Count() > 0) { return Json(studentQuery.ToArray()); }
+            if (studentQuery.Count() > 0) { return Json(studentQuery.First()); }
 
             var professorQuery = 
                 from p in db.Professors
                 where p.UId == uid
                 select new { fname = p.FirstName, lname = p.LastName, uid = p.UId, department = p.Department };
 
-            if (professorQuery.Count() > 0) { return Json(professorQuery.ToArray()); }
+            if (professorQuery.Count() > 0) { return Json(professorQuery.First()); }
 
             var adminQuery = 
                 from a in db.Administrators
                 where a.UId == uid
                 select new { fname = a.FirstName, lname = a.LastName, uid = a.UId };
 
-            if (adminQuery.Count() > 0) { return Json(adminQuery.ToArray()); }
+            if (adminQuery.Count() > 0) { return Json(adminQuery.First()); }
 
 
             return Json(new { success = false });
