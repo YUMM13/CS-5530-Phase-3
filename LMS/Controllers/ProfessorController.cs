@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using LMS.Models.LMSModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 [assembly: InternalsVisibleTo( "LMSControllerTests" )]
@@ -348,7 +353,7 @@ namespace LMS_CustomIdentity.Controllers
 
             // get the category
             var cat = db.Categories.FirstOrDefault(ca =>
-            ca.Name == category &&
+            ca.Name.Equals(System.Uri.UnescapeDataString(category)) &&
             ca.ClassId == specificClass.ClassId);
 
             try
@@ -391,7 +396,46 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetSubmissionsToAssignment(string subject, int num, string season, int year, string category, string asgname)
         {
-            return Json(null);
+            // Find the one assignment
+            var course = db.Courses.FirstOrDefault(co =>
+            co.Department == subject &&
+            co.Number == num);
+
+            // get the class that matches the parameters
+            var specificClass = db.Classes.FirstOrDefault(cl =>
+            cl.CourseId == course.CourseId &&
+            cl.Season == season &&
+            cl.Year == year);
+
+            // get the category
+            var cat = db.Categories.FirstOrDefault(ca =>
+            ca.Name == category &&
+            ca.ClassId == specificClass.ClassId);
+
+            var assignment = db.Assignments.FirstOrDefault(assign =>
+            assign.CatId == cat.CatId &&
+            assign.Name == asgname);
+
+            //Need to get the name from the uid
+
+
+            //Join that assignment with submissions
+            //Join submissions with Student to get name
+            var query =
+                from sub in db.Submissions
+                join student in db.Students on sub.UId equals student.UId
+                where sub.AssignmentId == assignment.AssignmentId
+
+                select new
+                {
+                    fname = student.FirstName,
+                    lname = student.LastName,
+                    uid = student.UId,
+                    time = sub.Submitted,
+                    score = sub.Score
+                };
+            
+            return Json(query.ToArray());
         }
 
 
@@ -409,7 +453,120 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult GradeSubmission(string subject, int num, string season, int year, string category, string asgname, string uid, int score)
         {
-            return Json(new { success = false });
+            uint uscore = (uint)score;
+            // Find the one assignment
+            var course = db.Courses.FirstOrDefault(co =>
+            co.Department == subject &&
+            co.Number == num);
+
+            // get the class that matches the parameters
+            var specificClass = db.Classes.FirstOrDefault(cl =>
+            cl.CourseId == course.CourseId &&
+            cl.Season == season &&
+            cl.Year == year);
+
+            // get the category
+            var cat = db.Categories.FirstOrDefault(ca =>
+            ca.Name == category &&
+            ca.ClassId == specificClass.ClassId);
+
+            var assignment = db.Assignments.FirstOrDefault(assign =>
+            assign.CatId == cat.CatId &&
+            assign.Name == asgname);
+
+            var submission = db.Submissions.FirstOrDefault(sub =>
+            sub.AssignmentId == assignment.AssignmentId &&
+            sub.UId == uid);
+
+            var enrolled = db.Enrolleds.FirstOrDefault(en =>
+            en.ClassId == specificClass.ClassId
+            );
+
+            try
+            {
+                //Update sumbmission score
+                submission.Score = uscore;
+
+                //Update Class grade
+                string letter = LetterGrade(specificClass.ClassId, uid);
+                enrolled.Grade = letter;
+
+                db.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false });
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="classID"></param>
+        /// <param name="uid"></param>
+        /// <returns></returns>
+        public String LetterGrade(uint classID, string uid)
+        {
+            double grade = 0;
+            double sumOfCatWeights = 0;
+            //Get all the categories
+            var query =
+                from c in db.Categories
+                where c.ClassId == classID
+                select c;
+            //Loop over categories
+            var categories = query.ToList();
+            
+            foreach (var cat in categories)
+            {
+                double catPoints = 0;
+                double studentScore = 0;
+
+                //Max point of the class
+                var maxPoints =
+                    from a in db.Assignments
+                        join sub in db.Submissions on a.AssignmentId equals sub.AssignmentId
+                        where a.CatId == cat.CatId && sub.UId == uid
+                        select new { max = a.MaxPoints, score = sub.Score };
+                if (maxPoints.Count() == 0)
+                    continue;
+                foreach (var points in maxPoints)
+                {
+                    catPoints += points.max;
+                    studentScore += points.score ?? 0;
+                }
+                
+                grade += (studentScore/catPoints) * cat.Weight;
+                sumOfCatWeights += cat.Weight;
+            }
+            //Scale
+            grade *= (100 / sumOfCatWeights);
+
+            Debug.WriteLine(sumOfCatWeights + " " + grade + " ");
+
+            if (grade >= 93)
+                return "A";
+            if (grade >= 90)
+                return "A-";
+            if (grade >= 87)
+                return "B+"; 
+            if (grade >= 83)
+                return "B";
+            if (grade >= 80)
+                return "B-";
+            if (grade >= 77)
+                return "C+";
+            if (grade >= 73)
+                return "C";
+            if (grade >= 70)
+                return "C-";
+            if (grade >= 67)
+                return "D+";
+            if (grade >= 63)
+                return "D";
+            if (grade >= 60)
+                return "D-";
+            return "E";
         }
 
 
@@ -433,9 +590,6 @@ namespace LMS_CustomIdentity.Controllers
 
             return Json(query.ToArray());
         }
-
-
-        
         /*******End code to modify********/
     }
 }

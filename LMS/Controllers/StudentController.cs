@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -53,7 +54,6 @@ namespace LMS.Controllers
 
         public IActionResult ClassListings(string subject, string num)
         {
-            System.Diagnostics.Debug.WriteLine(subject + num);
             ViewData["subject"] = subject;
             ViewData["num"] = num;
             return View();
@@ -115,21 +115,39 @@ namespace LMS.Controllers
             cl.Year == year &&
             cl.CourseId == courseID.CourseId);
 
-            // get the assignments in the class that the student is enrolled in
-            var query =
-                from c in db.Categories
-                join a in db.Assignments
-                on c.CatId equals a.CatId
-                into left1
 
+
+            // get the assignments in the class that the student is enrolled in
+            /*        var query =
+                        from c in db.Categories
+                        join a in db.Assignments
+                        on c.CatId equals a.CatId
+                        into left1
+
+                        from l in left1
+                        join s in db.Submissions
+                        on l.AssignmentId equals s.AssignmentId
+                        where s.UId == uid
+                        select new { aname = l.Name, cname = c.Name, due = l.DueDate, score = s.Score };*/
+            var query =
+                from c in db.Categories                
+                where c.ClassId == classID.ClassId
+                join a in db.Assignments on c.CatId equals a.CatId
+                into left1
                 from l in left1
                 join s in db.Submissions
-                on l.AssignmentId equals s.AssignmentId
-                where s.UId == uid
-                select new { aname = l.Name, cname = c.Name, due = l.DueDate, score = s.Score };
-                
+                on new { l.AssignmentId, UId = uid } equals new { s.AssignmentId, s.UId }
+                into left2
+                from s in left2.DefaultIfEmpty() // Left join here
+                select new
+                {
+                    aname = l.Name,
+                    cname = c.Name,
+                    due = l.DueDate,
+                    score = s.Score // Use null conditional operator to handle null scores
+                };
 
-            // MAY NEED TO UPDATE QUERY TO BE A LEFT JOIN
+
 
             return Json(query.ToArray());
         }
@@ -155,8 +173,59 @@ namespace LMS.Controllers
         /// <returns>A JSON object containing {success = true/false}</returns>
         public IActionResult SubmitAssignmentText(string subject, int num, string season, int year,
           string category, string asgname, string uid, string contents)
-        {           
-            return Json(new { success = false });
+        {
+            var course = db.Courses.FirstOrDefault(co =>
+            co.Department == subject &&
+            co.Number == num);
+
+            // get the class that matches the parameters
+            var specificClass = db.Classes.FirstOrDefault(cl =>
+            cl.CourseId == course.CourseId &&
+            cl.Season == season &&
+            cl.Year == year);
+
+            // get the category
+            var cat = db.Categories.FirstOrDefault(ca =>
+            ca.Name == category &&
+            ca.ClassId == specificClass.ClassId);
+
+            var assignment = db.Assignments.FirstOrDefault(assign =>
+            assign.CatId == cat.CatId &&
+            assign.Name == asgname);
+
+            //Check if Submission already exists
+            //TODO...
+            var checkSubmission = db.Submissions.FirstOrDefault(sub =>
+            sub.UId == uid &&
+            sub.AssignmentId == assignment.AssignmentId
+            ) ;
+            if (checkSubmission != null)
+            {
+                checkSubmission.Solution = contents;
+                checkSubmission.Submitted = DateTime.Now;
+            }
+            else
+            {
+                //Create new Submission
+                var submission = new Submission();
+                submission.Solution = contents;
+                submission.AssignmentId = assignment.AssignmentId;
+                submission.Score = 0;
+                submission.Submitted = DateTime.Now;
+                submission.UId = uid;
+
+                db.Submissions.Add(submission);
+            }
+
+            try
+            {
+                db.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false });
+            }
         }
 
 
@@ -224,10 +293,42 @@ namespace LMS.Controllers
         /// <param name="uid">The uid of the student</param>
         /// <returns>A JSON object containing a single field called "gpa" with the number value</returns>
         public IActionResult GetGPA(string uid)
-        {            
-            return Json(null);
+        {
+            double student_gpa = 0;
+
+            var query =
+                from e in db.Enrolleds
+                where e.UId == uid
+                select e.Grade;
+            int classes = query.Count();
+            foreach (string e in query)
+            {
+                switch(e)
+                {
+                    case "A": student_gpa = 4.0; break;
+                    case "A-": student_gpa = 3.7; break;
+                    case "B+": student_gpa = 3.3; break;
+                    case "B": student_gpa = 3.0; break;
+                    case "B-": student_gpa = 2.7; break;
+                    case "C+": student_gpa = 2.3; break;
+                    case "C": student_gpa = 2.0; break;
+                    case "C-": student_gpa = 1.7; break;
+                    case "D+": student_gpa = 1.3; break;
+                    case "D": student_gpa = 1.0; break;
+                    case "D-": student_gpa = 0.7; break;
+                    case "E": break;
+                    default:
+                        classes--; break; //Dont Count towards gpa
+                }
+            }
+
+            if (classes > 0)
+                student_gpa /= classes;
+
+            return Json(new { gpa = student_gpa });
+
         }
-                
+
         /*******End code to modify********/
 
     }
