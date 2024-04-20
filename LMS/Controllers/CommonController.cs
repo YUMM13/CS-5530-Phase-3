@@ -35,7 +35,6 @@ namespace LMS.Controllers
         /// <returns>The JSON array</returns>
         public IActionResult GetDepartments()
         {            
-            // SELCT * FROM Departments
             var query = 
                 from d in db.Departments
                 select new {name =  d.Name, subject = d.Subject};
@@ -135,8 +134,6 @@ namespace LMS.Controllers
                 where a.Name == asgname && a.CatId == cat.CatId
                 select a.Contents;
 
-
-            // MAY BE WRONG
             return Content(query.ToJson());
         }
 

@@ -115,20 +115,6 @@ namespace LMS.Controllers
             cl.Year == year &&
             cl.CourseId == courseID.CourseId);
 
-
-
-            // get the assignments in the class that the student is enrolled in
-            /*        var query =
-                        from c in db.Categories
-                        join a in db.Assignments
-                        on c.CatId equals a.CatId
-                        into left1
-
-                        from l in left1
-                        join s in db.Submissions
-                        on l.AssignmentId equals s.AssignmentId
-                        where s.UId == uid
-                        select new { aname = l.Name, cname = c.Name, due = l.DueDate, score = s.Score };*/
             var query =
                 from c in db.Categories                
                 where c.ClassId == classID.ClassId
@@ -194,11 +180,10 @@ namespace LMS.Controllers
             assign.Name == asgname);
 
             //Check if Submission already exists
-            //TODO...
             var checkSubmission = db.Submissions.FirstOrDefault(sub =>
             sub.UId == uid &&
-            sub.AssignmentId == assignment.AssignmentId
-            ) ;
+            sub.AssignmentId == assignment.AssignmentId);
+
             if (checkSubmission != null)
             {
                 checkSubmission.Solution = contents;
@@ -305,16 +290,16 @@ namespace LMS.Controllers
             {
                 switch(e)
                 {
-                    case "A": student_gpa = 4.0; break;
+                    case "A":  student_gpa = 4.0; break;
                     case "A-": student_gpa = 3.7; break;
                     case "B+": student_gpa = 3.3; break;
-                    case "B": student_gpa = 3.0; break;
+                    case "B":  student_gpa = 3.0; break;
                     case "B-": student_gpa = 2.7; break;
                     case "C+": student_gpa = 2.3; break;
-                    case "C": student_gpa = 2.0; break;
+                    case "C":  student_gpa = 2.0; break;
                     case "C-": student_gpa = 1.7; break;
                     case "D+": student_gpa = 1.3; break;
-                    case "D": student_gpa = 1.0; break;
+                    case "D":  student_gpa = 1.0; break;
                     case "D-": student_gpa = 0.7; break;
                     case "E": break;
                     default:

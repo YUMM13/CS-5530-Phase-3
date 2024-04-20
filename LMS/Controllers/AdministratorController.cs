@@ -167,13 +167,6 @@ namespace LMS.Controllers
             TimeOnly startTime = new TimeOnly(start.Hour, start.Minute, start.Second);
             TimeOnly endTime = new TimeOnly(end.Hour, end.Minute, end.Second);
 
-            // get the courseID of the matching course
-            /*var query =
-                from course in db.Courses
-                where course.Department == subject && course.Number == number
-                select course;
-            */
-
             var course = db.Courses.FirstOrDefault(id =>
             id.Department == subject &&
             id.Number == number);

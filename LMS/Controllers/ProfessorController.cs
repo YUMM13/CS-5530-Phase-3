@@ -208,12 +208,6 @@ namespace LMS_CustomIdentity.Controllers
                 cl.Season == season &&
                 cl.Year == year);
 
-                // get the total submissions for an assignment
-                /*var totalSubmissions = 
-                    from a in db.Assignments
-                    select a.Submissions.Count();*/
-
-
                 var query =
                     from cat in db.Categories
                     join a in db.Assignments
@@ -453,8 +447,8 @@ namespace LMS_CustomIdentity.Controllers
         /// <returns>A JSON object containing success = true/false</returns>
         public IActionResult GradeSubmission(string subject, int num, string season, int year, string category, string asgname, string uid, int score)
         {
-            uint uscore = (uint)score;
             // Find the one assignment
+            uint uscore = (uint)score;
             var course = db.Courses.FirstOrDefault(co =>
             co.Department == subject &&
             co.Number == num);
@@ -479,8 +473,8 @@ namespace LMS_CustomIdentity.Controllers
             sub.UId == uid);
 
             var enrolled = db.Enrolleds.FirstOrDefault(en =>
-            en.ClassId == specificClass.ClassId
-            );
+            en.ClassId == specificClass.ClassId &&
+            en.UId == uid);
 
             try
             {
@@ -541,8 +535,6 @@ namespace LMS_CustomIdentity.Controllers
             }
             //Scale
             grade *= (100 / sumOfCatWeights);
-
-            Debug.WriteLine(sumOfCatWeights + " " + grade + " ");
 
             if (grade >= 93)
                 return "A";
